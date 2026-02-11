@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
-import { useDropzone } from "react-dropzone";
+import { FileRejection, useDropzone } from "react-dropzone";
 import { Loader2, Upload } from "lucide-react";
 import Image from "next/image";
 
@@ -69,7 +69,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
   );
 
   const onDropRejected = useCallback(
-    (fileRejections: Array<{ file: File; errors: Array<{ code: string; message: string }> }>) => {
+    (fileRejections: FileRejection[]) => {
       if (!fileRejections.length) return;
 
       const firstRejection = fileRejections[0];
