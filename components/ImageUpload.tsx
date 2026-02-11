@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import { FileRejection, useDropzone } from "react-dropzone";
 import { Loader2, Upload } from "lucide-react";
 import Image from "next/image";
+import { compressImageToKB } from "@/lib/compressImage";
 
 interface ImageUploadProps {
   onUpload: (imageUrls: string[]) => void;
@@ -12,6 +13,7 @@ interface ImageUploadProps {
 }
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+const MAX_COMPRESSED_SIZE_KB = 1024;
 
 export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
@@ -40,6 +42,17 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
             );
           }
 
+          let fileToUpload = file;
+          if (fileToUpload.size > MAX_COMPRESSED_SIZE_KB * 1024) {
+            fileToUpload = await compressImageToKB(fileToUpload, MAX_COMPRESSED_SIZE_KB);
+          }
+
+          if (fileToUpload.size > MAX_COMPRESSED_SIZE_KB * 1024) {
+            throw new Error(
+              `${file.name} could not be compressed below 1MB. Please use a clearer or smaller image.`
+            );
+          }
+
           // Convert to base64 for MVP (in production, upload to storage)
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -47,8 +60,8 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
               const result = reader.result as string;
               resolve(result);
             };
-            reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
-            reader.readAsDataURL(file);
+            reader.onerror = () => reject(new Error(`Failed to read file: ${fileToUpload.name}`));
+            reader.readAsDataURL(fileToUpload);
           });
           imageUrls.push(base64);
         }
@@ -58,7 +71,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
         console.error("Upload error:", error);
         const message =
           error?.message ||
-          "Image upload failed. Please ensure files are valid image types and under 5MB each.";
+          "Image upload failed. Please ensure files are valid image types and can be compressed to 1MB.";
         setUploadError(message);
       } finally {
         setUploading(false);
@@ -146,7 +159,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Upload up to {maxImages - existingImages.length} more image
-              {maxImages - existingImages.length !== 1 ? "s" : ""} (any image type, max 5MB each)
+              {maxImages - existingImages.length !== 1 ? "s" : ""} (any image type, compressed to 1MB)
             </p>
           </>
         )}
