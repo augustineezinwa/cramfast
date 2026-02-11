@@ -7,6 +7,37 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
+const OCR_FAILURE_PATTERNS = [
+  "unable to extract text",
+  "can't extract text",
+  "cannot extract text",
+  "image is unclear",
+  "cannot read",
+  "can't read",
+  "not legible",
+  "no text found",
+];
+
+const REFUSAL_PATTERNS = [
+  "i'm sorry",
+  "i cannot assist",
+  "i can't assist",
+  "i can't help with that",
+  "i cannot help with that",
+  "as an ai",
+  "i must refuse",
+];
+
+function looksLikeOcrFailure(text: string) {
+  const normalized = text.toLowerCase();
+  return OCR_FAILURE_PATTERNS.some((pattern) => normalized.includes(pattern));
+}
+
+function looksLikeRefusal(text: string) {
+  const normalized = text.toLowerCase();
+  return REFUSAL_PATTERNS.some((pattern) => normalized.includes(pattern));
+}
+
 export const generateFlashcards = action({
   args: {
     sessionId: v.id("sessions"),
@@ -25,39 +56,60 @@ export const generateFlashcards = action({
     await ctx.runMutation(api.sessions.updateSessionStatus, { sessionId, userId, status: "generating" });
 
     try {
-      // MVP: combine all images into one extraction request
+      // Extract text page-by-page with retry.
       const combinedNotes: string[] = [];
 
       for (const imageUrl of session.imageUrls) {
         try {
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages: [
-              {
-                role: "user",
-                content: [
-                  {
-                    type: "text",
-                    text: "Extract all text from this handwritten note page. Preserve formatting as much as possible.",
-                  },
-                  {
-                    type: "image_url",
-                    image_url: { url: imageUrl },
-                  },
-                ],
-              },
-            ],
-            max_tokens: 2000,
-          });
-          const text = response.choices[0]?.message?.content || "";
-          combinedNotes.push(text);
+          let extracted = "";
+
+          for (let attempt = 1; attempt <= 2; attempt++) {
+            const response = await openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "user",
+                  content: [
+                    {
+                      type: "text",
+                      text:
+                        "You are an OCR transcriber for handwritten study notes. " +
+                        "Return only the exact transcribed text from this page. " +
+                        "Do not give advice or explanations. If some words are unclear, mark with [illegible]. " +
+                        "Keep bullets, headings, formulas, and numbering.",
+                    },
+                    {
+                      type: "image_url",
+                      image_url: { url: imageUrl },
+                    },
+                  ],
+                },
+              ],
+              max_tokens: 2000,
+              temperature: 0,
+            });
+
+            extracted = (response.choices[0]?.message?.content || "").trim();
+            if (extracted && !looksLikeOcrFailure(extracted)) break;
+          }
+
+          // Keep only meaningful text blocks.
+          if (extracted && !looksLikeOcrFailure(extracted)) {
+            combinedNotes.push(extracted);
+          }
         } catch (imgError: any) {
           console.error("Error extracting text from image:", imgError?.message);
-          combinedNotes.push(""); // continue even if one image fails
+          // Continue even if one image fails.
         }
       }
 
-      const notesText = combinedNotes.join("\n\n");
+      const notesText = combinedNotes.join("\n\n").trim();
+      if (!notesText) {
+        throw new Error(
+          "Could not extract readable text from the uploaded images. " +
+          "Please upload clearer photos (good lighting, less blur, closer crop, and straight pages)."
+        );
+      }
 
       // Generate flashcards
       const flashcardPrompt = `
@@ -73,14 +125,48 @@ Notes:
 ${notesText}
       `;
 
-      const completion = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [{ role: "user", content: flashcardPrompt }],
-        response_format: { type: "json_object" },
-        temperature: 0.7,
-      });
+      let parsedResult: any = null;
+      for (let attempt = 1; attempt <= 2; attempt++) {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o-mini",
+          messages: [
+            {
+              role: "system",
+              content:
+                "You are a flashcard generator for study notes. " +
+                "Return ONLY JSON with keys: topic, flashcards. " +
+                "Do not include disclaimers, refusals, markdown, or extra text.",
+            },
+            { role: "user", content: flashcardPrompt },
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.3,
+        });
 
-      const result = JSON.parse(completion.choices[0]?.message?.content || "{}");
+        const raw = (completion.choices[0]?.message?.content || "").trim();
+        if (!raw || looksLikeRefusal(raw)) {
+          continue;
+        }
+
+        try {
+          const candidate = JSON.parse(raw);
+          const flashcards = Array.isArray(candidate?.flashcards) ? candidate.flashcards : [];
+          if (flashcards.length > 0) {
+            parsedResult = candidate;
+            break;
+          }
+        } catch {
+          // retry once if malformed JSON
+        }
+      }
+
+      if (!parsedResult) {
+        throw new Error(
+          "Model returned an unusable response. Please retry generation with clearer notes."
+        );
+      }
+
+      const result = parsedResult;
       const topic = result.topic || "Untitled";
       const flashcards = result.flashcards || [];
 

@@ -84,7 +84,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
 
       if (firstError?.code === "file-invalid-type") {
         setUploadError(
-          `${firstRejection.file.name} has an unsupported file type. Please upload PNG, JPG, JPEG, or WEBP images.`
+          `${firstRejection.file.name} has an unsupported file type. Please upload a valid image file (PNG, JPG, JPEG, WEBP, GIF, BMP, TIFF, HEIC, HEIF, or AVIF).`
         );
         return;
       }
@@ -105,7 +105,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
     onDrop,
     onDropRejected,
     accept: {
-      "image/*": [".png", ".jpg", ".jpeg", ".webp"],
+      "image/*": [],
     },
     maxFiles: maxImages - existingImages.length,
     maxSize: MAX_FILE_SIZE_BYTES,
@@ -146,7 +146,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Upload up to {maxImages - existingImages.length} more image
-              {maxImages - existingImages.length !== 1 ? "s" : ""} (PNG, JPG, WEBP, max 5MB each)
+              {maxImages - existingImages.length !== 1 ? "s" : ""} (any image type, max 5MB each)
             </p>
           </>
         )}

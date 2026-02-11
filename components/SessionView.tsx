@@ -57,7 +57,7 @@ export function SessionView({ sessionId, userId }: SessionViewProps) {
     } catch (error: any) {
       console.error("Failed to generate flashcards:", error);
       const errorString = error?.message || String(error) || "Unknown error";
-      setErrorMessage("An error occurred during generation");
+      setErrorMessage("I am unable to extract text from image, please use clearer image");
       setErrorDetails(errorString);
       setIsGenerating(false);
     }
