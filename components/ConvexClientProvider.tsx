@@ -5,7 +5,17 @@ import { ReactNode, useMemo } from "react";
 
 export function ConvexClientProvider({ children }: { children: ReactNode }) {
   const convexUrl = process.env.NEXT_PUBLIC_CONVEX_URL;
-  
+
+  const convex = useMemo(() => {
+    try {
+      if (!convexUrl) throw new Error("NEXT_PUBLIC_CONVEX_URL is not set");
+      return new ConvexReactClient(convexUrl);
+    } catch (error) {
+      console.error("Failed to create Convex client:", error);
+      throw error;
+    }
+  }, [convexUrl]);
+
   if (!convexUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center p-4">
@@ -42,14 +52,6 @@ export function ConvexClientProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  const convex = useMemo(() => {
-    try {
-      return new ConvexReactClient(convexUrl);
-    } catch (error) {
-      console.error("Failed to create Convex client:", error);
-      throw error;
-    }
-  }, [convexUrl]);
 
   return <ConvexProvider client={convex}>{children}</ConvexProvider>;
 }
