@@ -3,18 +3,20 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
-import { useQuery, useMutation } from "convex/react";
+import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { SessionList } from "@/components/SessionList";
 import { SessionView } from "@/components/SessionView";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { signOut } from "@/lib/auth";
-import { Loader2, LogOut } from "lucide-react";
+import { Loader2, LogOut, Menu, X } from "lucide-react";
 
 export default function DashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"sessions"> | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const createSession = useMutation(api.sessions.createSession);
 
   useEffect(() => {
@@ -53,21 +55,43 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
-        <div className="p-4 border-b border-gray-200">
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-100 flex">
+      {sidebarOpen && (
+        <button
+          aria-label="Close sidebar"
+          onClick={() => setSidebarOpen(false)}
+          className="fixed inset-0 z-30 bg-black/40 md:hidden"
+        />
+      )}
+
+      {/* Sidebar Drawer */}
+      <aside
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white border-r border-gray-200 dark:bg-gray-900 dark:border-gray-800 flex flex-col transform transition-transform duration-200 md:static md:w-64 md:max-w-none md:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               CramFast
             </h1>
-            <button
-              onClick={handleSignOut}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Sign out"
-            >
-              <LogOut className="w-5 h-5 text-gray-600" />
-            </button>
+            <div className="flex items-center gap-2">
+              <ThemeToggle />
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 md:hidden"
+                title="Close sidebar"
+              >
+                <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+              <button
+                onClick={handleSignOut}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+                title="Sign out"
+              >
+                <LogOut className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+              </button>
+            </div>
           </div>
           <button
             onClick={handleCreateSession}
@@ -79,21 +103,36 @@ export default function DashboardPage() {
         <SessionList
           userId={user.uid}
           selectedSessionId={selectedSessionId}
-          onSelectSession={setSelectedSessionId}
+          onSelectSession={(id) => {
+            setSelectedSessionId(id);
+            setSidebarOpen(false);
+          }}
         />
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
+      <div className="flex-1 overflow-auto w-full">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden dark:border-gray-800 dark:bg-gray-900/90">
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+          >
+            <Menu className="h-4 w-4" />
+            Sessions
+          </button>
+          <ThemeToggle />
+        </div>
         {selectedSessionId ? (
           <SessionView sessionId={selectedSessionId} userId={user.uid} />
         ) : (
           <div className="flex items-center justify-center h-full">
             <div className="text-center">
-              <h2 className="text-2xl font-semibold text-gray-700 mb-2">
+              <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-200 mb-2">
                 Select a session or create a new one
               </h2>
-              <p className="text-gray-500">Get started by creating your first flashcard session</p>
+              <p className="text-gray-500 dark:text-gray-400">
+                Get started by creating your first flashcard session
+              </p>
             </div>
           </div>
         )}

@@ -17,7 +17,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem("theme");
+                  var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+                  var shouldUseDark = stored ? stored === "dark" : prefersDark;
+                  if (shouldUseDark) document.documentElement.classList.add("dark");
+                  else document.documentElement.classList.remove("dark");
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={inter.className}>
         <ConvexClientProvider>
           <AuthProvider>{children}</AuthProvider>
