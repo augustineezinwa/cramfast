@@ -11,6 +11,7 @@
 import type * as auth from "../auth.js";
 import type * as flashcards from "../flashcards.js";
 import type * as sessions from "../sessions.js";
+import type * as uploads from "../uploads.js";
 
 import type {
   ApiFromModules,
@@ -22,6 +23,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   flashcards: typeof flashcards;
   sessions: typeof sessions;
+  uploads: typeof uploads;
 }>;
 
 /**

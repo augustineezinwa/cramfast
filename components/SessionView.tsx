@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useAction } from "convex/react";
+import { useQuery, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { ImageUpload } from "@/components/ImageUpload";
@@ -15,7 +15,7 @@ interface SessionViewProps {
 
 export function SessionView({ sessionId, userId }: SessionViewProps) {
   const session = useQuery(api.sessions.getSession, { sessionId, userId });
-  const addImages = useMutation(api.sessions.addImages);
+  const uploadImagesToCloudinary = useAction(api.uploads.uploadImagesToCloudinary);
   const generateFlashcards = useAction(api.flashcards.generateFlashcards);
   const [isGenerating, setIsGenerating] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -23,10 +23,10 @@ export function SessionView({ sessionId, userId }: SessionViewProps) {
 
   const handleImageUpload = async (imageUrls: string[]) => {
     try {
-      await addImages({
+      await uploadImagesToCloudinary({
         sessionId,
         userId,
-        imageUrls,
+        imagesBase64: imageUrls,
       });
     } catch (error: any) {
       console.error("Failed to add images:", error);

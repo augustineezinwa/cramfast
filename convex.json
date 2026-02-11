@@ -2,6 +2,6 @@
   "functions": "convex/",
   "generateCommonJSApi": false,
   "node": {
-    "externalPackages": ["openai"]
+    "externalPackages": ["openai", "cloudinary"]
   }
 }
