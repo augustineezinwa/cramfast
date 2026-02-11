@@ -38,6 +38,7 @@ const REDUCTION_FACTOR: ReductionFactorConfig = {
   2: 4,
   1.5: 4,
   1024: 10,
+  2048: 5,
 };
 
 function loadImage(file: File): Promise<HTMLImageElement> {
