@@ -28,9 +28,12 @@ export function SessionView({ sessionId, userId }: SessionViewProps) {
         userId,
         imageUrls,
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Failed to add images:", error);
-      alert("Failed to upload images. Please try again.");
+      throw new Error(
+        error?.message ||
+          "Failed to upload images. Please check file type, file size (max 5MB), and your network connection."
+      );
     }
   };
 

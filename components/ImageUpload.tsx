@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import Image from "next/image";
 
 interface ImageUploadProps {
@@ -11,21 +11,35 @@ interface ImageUploadProps {
   maxImages: number;
 }
 
+const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
+
 export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
+  const [uploadingCount, setUploadingCount] = useState(0);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      setUploadError(null);
       if (existingImages.length + acceptedFiles.length > maxImages) {
-        alert(`Maximum ${maxImages} images allowed`);
+        setUploadError(
+          `Upload exceeds limit. You can only upload up to ${maxImages} images per session.`
+        );
         return;
       }
 
       setUploading(true);
+      setUploadingCount(acceptedFiles.length);
       const imageUrls: string[] = [];
 
       try {
         for (const file of acceptedFiles) {
+          if (file.size > MAX_FILE_SIZE_BYTES) {
+            throw new Error(
+              `${file.name} is too large (${(file.size / (1024 * 1024)).toFixed(2)}MB). Max allowed size is 5MB per image.`
+            );
+          }
+
           // Convert to base64 for MVP (in production, upload to storage)
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
@@ -33,29 +47,68 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
               const result = reader.result as string;
               resolve(result);
             };
-            reader.onerror = reject;
+            reader.onerror = () => reject(new Error(`Failed to read file: ${file.name}`));
             reader.readAsDataURL(file);
           });
           imageUrls.push(base64);
         }
 
         await onUpload(imageUrls);
-      } catch (error) {
+      } catch (error: any) {
         console.error("Upload error:", error);
-        alert("Failed to upload images");
+        const message =
+          error?.message ||
+          "Image upload failed. Please ensure files are valid image types and under 5MB each.";
+        setUploadError(message);
       } finally {
         setUploading(false);
+        setUploadingCount(0);
       }
     },
     [onUpload, existingImages.length, maxImages]
   );
 
+  const onDropRejected = useCallback(
+    (fileRejections: Array<{ file: File; errors: Array<{ code: string; message: string }> }>) => {
+      if (!fileRejections.length) return;
+
+      const firstRejection = fileRejections[0];
+      const firstError = firstRejection.errors[0];
+
+      if (firstError?.code === "file-too-large") {
+        setUploadError(
+          `${firstRejection.file.name} is too large. Maximum file size is 5MB per image.`
+        );
+        return;
+      }
+
+      if (firstError?.code === "file-invalid-type") {
+        setUploadError(
+          `${firstRejection.file.name} has an unsupported file type. Please upload PNG, JPG, JPEG, or WEBP images.`
+        );
+        return;
+      }
+
+      if (firstError?.code === "too-many-files") {
+        setUploadError(
+          `Too many files selected. You can upload up to ${maxImages - existingImages.length} more image(s).`
+        );
+        return;
+      }
+
+      setUploadError(firstError?.message || "Upload failed. Please try again.");
+    },
+    [existingImages.length, maxImages]
+  );
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: {
       "image/*": [".png", ".jpg", ".jpeg", ".webp"],
     },
     maxFiles: maxImages - existingImages.length,
+    maxSize: MAX_FILE_SIZE_BYTES,
     disabled: uploading || existingImages.length >= maxImages,
   });
 
@@ -70,9 +123,22 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
         } ${existingImages.length >= maxImages ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         <input {...getInputProps()} />
-        <Upload className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+        {uploading ? (
+          <Loader2 className="w-12 h-12 mx-auto text-blue-600 dark:text-blue-400 mb-4 animate-spin" />
+        ) : (
+          <Upload className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+        )}
         {existingImages.length >= maxImages ? (
           <p className="text-gray-500 dark:text-gray-400">Maximum {maxImages} images reached</p>
+        ) : uploading ? (
+          <>
+            <p className="text-gray-700 dark:text-gray-200 font-medium mb-2">
+              Uploading {uploadingCount} image{uploadingCount === 1 ? "" : "s"}...
+            </p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Please wait while your images are being processed.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-gray-700 dark:text-gray-200 font-medium mb-2">
@@ -80,11 +146,17 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
             </p>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               Upload up to {maxImages - existingImages.length} more image
-              {maxImages - existingImages.length !== 1 ? "s" : ""} (PNG, JPG, WEBP)
+              {maxImages - existingImages.length !== 1 ? "s" : ""} (PNG, JPG, WEBP, max 5MB each)
             </p>
           </>
         )}
       </div>
+
+      {uploadError && (
+        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-300">
+          {uploadError}
+        </div>
+      )}
 
       {existingImages.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
