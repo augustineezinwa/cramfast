@@ -63,7 +63,7 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
     <div className="space-y-4">
       <div
         {...getRootProps()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+        className={`border-2 border-dashed rounded-lg p-8 min-h-[48vh] flex flex-col items-center justify-center text-center cursor-pointer transition-colors ${
           isDragActive
             ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
             : "border-gray-300 hover:border-gray-400 dark:border-gray-700 dark:hover:border-gray-600 dark:bg-gray-900"

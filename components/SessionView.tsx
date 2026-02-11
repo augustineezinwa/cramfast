@@ -86,7 +86,7 @@ export function SessionView({ sessionId, userId }: SessionViewProps) {
         {session.status === "completed" && session.flashcards ? (
           <FlashcardViewer flashcards={session.flashcards} topic={session.topic || ""} />
         ) : (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="mx-auto flex min-h-[60vh] w-full max-w-3xl flex-col justify-center space-y-6">
             <ImageUpload
               onUpload={handleImageUpload}
               existingImages={session.imageUrls}
