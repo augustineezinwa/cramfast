@@ -13,7 +13,7 @@ interface ImageUploadProps {
 }
 
 const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024;
-const MAX_COMPRESSED_SIZE_KB = 1024;
+const MAX_COMPRESSED_SIZE_KB = 20 * 1024;
 
 export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
