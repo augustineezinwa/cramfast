@@ -6,6 +6,7 @@ export default defineSchema({
     userId: v.string(),
     title: v.optional(v.string()),
     createdAt: v.number(),
+    generationMode: v.optional(v.union(v.literal("help_understand"), v.literal("generate_qa"))),
     imageUrls: v.array(v.string()),
     flashcards: v.optional(
       v.array(
