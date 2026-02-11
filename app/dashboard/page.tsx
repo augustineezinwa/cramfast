@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const router = useRouter();
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"sessions"> | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCreatingSession, setIsCreatingSession] = useState(false);
   const createSession = useMutation(api.sessions.createSession);
 
   useEffect(() => {
@@ -26,14 +27,18 @@ export default function DashboardPage() {
   }, [user, loading, router]);
 
   const handleCreateSession = async () => {
-    if (!user) return;
+    if (!user || isCreatingSession) return;
+    setIsCreatingSession(true);
     try {
       const sessionId = await createSession({
         userId: user.uid,
       });
       setSelectedSessionId(sessionId);
+      setSidebarOpen(false);
     } catch (error) {
       console.error("Failed to create session:", error);
+    } finally {
+      setIsCreatingSession(false);
     }
   };
 
@@ -95,9 +100,17 @@ export default function DashboardPage() {
           </div>
           <button
             onClick={handleCreateSession}
-            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            disabled={isCreatingSession}
+            className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-blue-600 flex items-center justify-center gap-2"
           >
-            + New Session
+            {isCreatingSession ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Creating...
+              </>
+            ) : (
+              "+ New Session"
+            )}
           </button>
         </div>
         <SessionList
@@ -112,15 +125,17 @@ export default function DashboardPage() {
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto w-full">
-        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/90 px-4 py-3 backdrop-blur md:hidden dark:border-gray-800 dark:bg-gray-900/90">
+        <div className="sticky top-0 z-20 flex items-center justify-between border-b border-gray-200 bg-white/95 px-4 py-3 backdrop-blur md:hidden dark:border-gray-800 dark:bg-gray-900/95">
           <button
             onClick={() => setSidebarOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 dark:border-gray-700 dark:text-gray-100 dark:hover:bg-gray-800"
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-100 dark:hover:bg-gray-800"
           >
-            <Menu className="h-4 w-4" />
+            <Menu className="h-4 w-4 text-gray-600 dark:text-gray-200" />
             Sessions
           </button>
-          <ThemeToggle />
+          <div className="rounded-lg bg-white/80 p-0.5 ring-1 ring-gray-200 dark:bg-gray-900/80 dark:ring-gray-700">
+            <ThemeToggle />
+          </div>
         </div>
         {selectedSessionId ? (
           <SessionView sessionId={selectedSessionId} userId={user.uid} />

@@ -65,20 +65,20 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
           isDragActive
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 hover:border-gray-400"
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
+            : "border-gray-300 hover:border-gray-400 dark:border-gray-700 dark:hover:border-gray-600 dark:bg-gray-900"
         } ${existingImages.length >= maxImages ? "opacity-50 cursor-not-allowed" : ""}`}
       >
         <input {...getInputProps()} />
-        <Upload className="w-12 h-12 mx-auto text-gray-400 mb-4" />
+        <Upload className="w-12 h-12 mx-auto text-gray-400 dark:text-gray-500 mb-4" />
         {existingImages.length >= maxImages ? (
-          <p className="text-gray-500">Maximum {maxImages} images reached</p>
+          <p className="text-gray-500 dark:text-gray-400">Maximum {maxImages} images reached</p>
         ) : (
           <>
-            <p className="text-gray-700 font-medium mb-2">
+            <p className="text-gray-700 dark:text-gray-200 font-medium mb-2">
               {isDragActive ? "Drop images here" : "Drag & drop images or click to select"}
             </p>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
               Upload up to {maxImages - existingImages.length} more image
               {maxImages - existingImages.length !== 1 ? "s" : ""} (PNG, JPG, WEBP)
             </p>
@@ -89,7 +89,10 @@ export function ImageUpload({ onUpload, existingImages, maxImages }: ImageUpload
       {existingImages.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {existingImages.map((url, index) => (
-            <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-gray-200">
+            <div
+              key={index}
+              className="relative aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+            >
               <Image src={url} alt={`Note ${index + 1}`} fill className="object-cover" />
             </div>
           ))}
