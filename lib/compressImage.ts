@@ -18,6 +18,7 @@ const IMAGE_QUALITY_CONFIG: ImageQualityConfig = {
   1.5: 0.1,
   2: 0.3,
   1024: 1,
+  2048: 1
 };
 
 /**
@@ -28,6 +29,7 @@ const TARGET_IMAGE_WIDTH_CONFIG: TargetImageWidthConfig = {
   1.5: 400,
   2: 400,
   1024: 800,
+  2048: 1000
 };
 
 /**
@@ -38,7 +40,7 @@ const REDUCTION_FACTOR: ReductionFactorConfig = {
   2: 4,
   1.5: 4,
   1024: 10,
-  2048: 5,
+  2048: 10
 };
 
 function loadImage(file: File): Promise<HTMLImageElement> {
