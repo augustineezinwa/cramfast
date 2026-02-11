@@ -125,6 +125,7 @@ export const updateSessionWithFlashcards = mutation({
       })
     ),
     topic: v.string(),
+    title: v.optional(v.string()),
     status: v.union(
       v.literal("pending"),
       v.literal("generating"),
@@ -146,6 +147,7 @@ export const updateSessionWithFlashcards = mutation({
     await ctx.db.patch(args.sessionId, {
       flashcards: args.flashcards,
       topic: args.topic,
+      ...(args.title ? { title: args.title } : {}),
       status: args.status,
     });
   },

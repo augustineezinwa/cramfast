@@ -57,9 +57,9 @@ export const generateFlashcards = action({
 
     try {
       // Extract text page-by-page with retry.
-      const combinedNotes: string[] = [];
+      const extractedPages: Array<{ page: number; text: string }> = [];
 
-      for (const imageUrl of session.imageUrls) {
+      for (const [index, imageUrl] of session.imageUrls.entries()) {
         try {
           let extracted = "";
 
@@ -95,7 +95,7 @@ export const generateFlashcards = action({
 
           // Keep only meaningful text blocks.
           if (extracted && !looksLikeOcrFailure(extracted)) {
-            combinedNotes.push(extracted);
+            extractedPages.push({ page: index + 1, text: extracted });
           }
         } catch (imgError: any) {
           console.error("Error extracting text from image:", imgError?.message);
@@ -103,7 +103,10 @@ export const generateFlashcards = action({
         }
       }
 
-      const notesText = combinedNotes.join("\n\n").trim();
+      const notesText = extractedPages
+        .map((p) => `--- PAGE ${p.page} START ---\n${p.text}\n--- PAGE ${p.page} END ---`)
+        .join("\n\n")
+        .trim();
       if (!notesText) {
         throw new Error(
           "Could not extract readable text from the uploaded images. " +
@@ -114,13 +117,22 @@ export const generateFlashcards = action({
       // Generate flashcards
       const flashcardPrompt = `
 You are an AI study assistant. Convert the notes into exam-ready flashcards.
+The notes are segmented by page markers. Use content from ALL pages and do not ignore earlier pages.
+If a page has useful text, include at least one flashcard from that page.
+
 Return ONLY valid JSON in this format:
 {
   "topic": "Topic name",
-  "flashcards": [
-    { "front": "Question 1", "back": "Answer 1" }
+  "pages": [
+    {
+      "page": 1,
+      "flashcards": [
+        { "front": "Question 1", "back": "Answer 1" }
+      ]
+    }
   ]
 }
+
 Notes:
 ${notesText}
       `;
@@ -150,9 +162,20 @@ ${notesText}
 
         try {
           const candidate = JSON.parse(raw);
-          const flashcards = Array.isArray(candidate?.flashcards) ? candidate.flashcards : [];
-          if (flashcards.length > 0) {
-            parsedResult = candidate;
+          const pageGroups = Array.isArray(candidate?.pages) ? candidate.pages : [];
+          const flatFromPages = pageGroups.flatMap((group: any) =>
+            Array.isArray(group?.flashcards) ? group.flashcards : []
+          );
+          const fallbackFlat = Array.isArray(candidate?.flashcards) ? candidate.flashcards : [];
+          const normalizedFlashcards = (flatFromPages.length > 0 ? flatFromPages : fallbackFlat).filter(
+            (f: any) => typeof f?.front === "string" && typeof f?.back === "string"
+          );
+
+          if (normalizedFlashcards.length > 0) {
+            parsedResult = {
+              topic: candidate?.topic || "Untitled",
+              flashcards: normalizedFlashcards,
+            };
             break;
           }
         } catch {
@@ -166,9 +189,9 @@ ${notesText}
         );
       }
 
-      const result = parsedResult;
-      const topic = result.topic || "Untitled";
-      const flashcards = result.flashcards || [];
+      const topic = parsedResult.topic || "Untitled";
+      const flashcards = parsedResult.flashcards || [];
+      const sessionTitle = topic.trim() || "Untitled";
 
       // Save flashcards
       await ctx.runMutation(api.sessions.updateSessionWithFlashcards, {
@@ -176,6 +199,7 @@ ${notesText}
         userId,
         flashcards,
         topic,
+        title: sessionTitle,
         status: "completed",
       });
 

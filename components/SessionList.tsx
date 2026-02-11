@@ -33,7 +33,7 @@ export function SessionList({ userId, selectedSessionId, onSelectSession }: Sess
   }
 
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="h-full overflow-y-auto">
       {sessions.map((session) => (
         <button
           key={session._id}

@@ -71,11 +71,11 @@ export default function DashboardPage() {
 
       {/* Sidebar Drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white border-r border-gray-200 dark:bg-gray-900 dark:border-gray-800 flex flex-col transform transition-transform duration-200 md:static md:w-64 md:max-w-none md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 w-72 max-w-[85vw] bg-white border-r border-gray-200 dark:bg-gray-900 dark:border-gray-800 flex flex-col overflow-hidden transform transition-transform duration-200 md:sticky md:top-0 md:h-screen md:w-64 md:max-w-none md:translate-x-0 ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="p-4 border-b border-gray-200 dark:border-gray-800">
+        <div className="sticky top-0 z-10 p-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
           <div className="flex items-center justify-between mb-4">
             <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
               CramFast
@@ -113,14 +113,16 @@ export default function DashboardPage() {
             )}
           </button>
         </div>
-        <SessionList
-          userId={user.uid}
-          selectedSessionId={selectedSessionId}
-          onSelectSession={(id) => {
-            setSelectedSessionId(id);
-            setSidebarOpen(false);
-          }}
-        />
+        <div className="flex-1 min-h-0 overflow-y-auto">
+          <SessionList
+            userId={user.uid}
+            selectedSessionId={selectedSessionId}
+            onSelectSession={(id) => {
+              setSelectedSessionId(id);
+              setSidebarOpen(false);
+            }}
+          />
+        </div>
       </aside>
 
       {/* Main Content */}
